@@ -55,6 +55,13 @@
         .reg-step.active { display: block; animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
+        /* MODALS */
+        .modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); justify-content: center; align-items: center; padding: 20px; }
+        .modal.active { display: flex; animation: fadeIn 0.2s ease; }
+        .modal-card { width: 100%; max-width: 360px; background: var(--bg-panel); border-radius: var(--radius-xl); padding: 30px; box-shadow: var(--shadow); position: relative; }
+        .close-modal { position: absolute; top: 20px; right: 25px; cursor: pointer; color: var(--text-muted); font-size: 20px; background: none; border: none; }
+        .close-modal:hover { color: #fff; }
+
         /* CHAT APP LAYOUT */
         .chat-container { display: flex; height: 100vh; width: 100vw; background: var(--bg-base); }
         
@@ -67,16 +74,12 @@
         .icon-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.05); color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
         .icon-btn:hover { background: var(--bg-hover); color: var(--accent); }
 
-        .sb-tabs { display: flex; background: var(--bg-panel); margin: 0 30px 20px; border-radius: var(--radius-pill); padding: 5px; }
-        .sb-tab { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; font-weight: 500; color: var(--text-muted); border-radius: var(--radius-pill); cursor: pointer; transition: 0.3s; }
-        .sb-tab.active { background: var(--accent); color: #fff; box-shadow: 0 4px 10px rgba(124, 93, 255, 0.3); }
-
         .search-bar { padding: 0 30px 15px; display: block; }
 
         .contact-list { flex: 1; overflow-y: auto; padding: 10px 20px; }
         .c-item { display: flex; align-items: center; gap: 15px; padding: 15px 10px; border-radius: var(--radius-lg); cursor: pointer; transition: 0.2s; }
         .c-item:hover { background: var(--bg-panel); }
-        .av { width: 50px; height: 50px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; overflow: hidden; flex-shrink: 0; text-transform: uppercase; }
+        .av { width: 50px; height: 50px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; overflow: hidden; flex-shrink: 0; text-transform: uppercase; color: #fff; }
         .av img { width: 100%; height: 100%; object-fit: cover; }
         
         .c-info { flex: 1; overflow: hidden; }
@@ -87,14 +90,15 @@
         .c-msg { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; min-width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0 6px; margin-left: 8px; }
 
-        .drawer { position: absolute; top: 0; left: -100%; width: 100%; height: 100%; z-index: 100; background: var(--bg-panel); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 30px; display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+        .drawer { position: absolute; top: 0; left: -100%; width: 100%; height: 100%; z-index: 100; background: var(--bg-panel); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 30px; display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.5); overflow-y: auto; }
         .drawer.open { left: 0; }
         
         /* MAIN CHAT AREA */
         .chat-main { flex: 1; display: flex; flex-direction: column; position: relative; background: var(--bg-base); }
         
         .chat-header { height: 90px; background: var(--bg-panel); border-bottom-left-radius: 40px; display: flex; align-items: center; padding: 0 30px; justify-content: space-between; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .ch-left { display: flex; align-items: center; gap: 15px; overflow: hidden; }
+        .ch-left { display: flex; align-items: center; gap: 15px; overflow: hidden; cursor: pointer; padding: 5px; border-radius: var(--radius-lg); transition: 0.2s; }
+        .ch-left:hover { background: rgba(255,255,255,0.03); }
         .ch-info { display: flex; flex-direction: column; overflow: hidden; }
         .ch-name { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ch-status { font-size: 12px; color: var(--accent); font-weight: 500; }
@@ -126,11 +130,10 @@
         .send-btn:hover { transform: scale(1.05); }
 
         .username-field { display: flex; align-items: center; background: var(--bg-base); border-radius: var(--radius-lg); padding: 0 20px; transition: 0.3s; }
-        .username-field:focus-within { border: 1px solid var(--accent); background: #181820; }
+        .username-field:focus-within { border: 1px solid var(--accent); }
         .username-field span { color: var(--accent); font-weight: 600; font-size: 14px; }
         .username-field input { border: none; background: transparent; padding: 16px 5px; flex: 1; outline: none; color: #fff; font-size: 14px; }
 
-        /* Mobile */
         #back-btn { display: none; background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; margin-right: 5px; }
         @media (max-width: 768px) {
             .sidebar { width: 100%; border-right: none; position: absolute; height: 100%; transition: 0.3s transform; }
@@ -145,6 +148,23 @@
     </style>
 </head>
 <body>
+
+<div class="modal" id="modal-profile">
+    <div class="modal-card" style="text-align: center;">
+        <button class="close-modal" onclick="closeModal('modal-profile')">✕</button>
+        <div class="av" id="m-prof-av" style="width:110px; height:110px; margin: 0 auto 15px; font-size: 40px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">?</div>
+        <h2 id="m-prof-name" style="margin-bottom: 5px;">Name</h2>
+        <p id="m-prof-uname" style="color:var(--accent); margin-bottom: 25px; font-weight: 500;">@username</p>
+        
+        <div style="text-align:left; background: var(--bg-base); padding: 20px; border-radius: var(--radius-lg);">
+            <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Email</p>
+            <p id="m-prof-email" style="font-size:14px; font-weight: 500; margin-bottom: 15px;">email@example.com</p>
+            
+            <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Bio</p>
+            <p id="m-prof-bio" style="font-size:14px; font-weight: 500; line-height: 1.5;">Available</p>
+        </div>
+    </div>
+</div>
 
 <div class="view active" id="view-login">
     <div class="auth-card">
@@ -202,23 +222,32 @@
                     <span style="font-size: 20px; font-weight: 600;">Settings</span>
                     <button class="icon-btn" onclick="toggleDrawer()">✕</button>
                 </div>
-                <div style="text-align: center; margin-bottom: 30px;">
+                <div style="text-align: center; margin-bottom: 25px;">
                     <label style="cursor:pointer; display:block; margin:0 auto 15px; width:100px; height:100px;">
                         <div class="av" id="dr-av" style="width:100%; height:100%; font-size: 32px; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">?</div>
                         <input type="file" id="dr-photo" hidden accept="image/*">
                     </label>
-                    <div class="fgroup" style="margin-bottom: 10px;">
-                        <input type="text" id="dr-name-in" class="finput" style="text-align:center; font-weight:600; font-size:16px;" placeholder="Full Name">
-                    </div>
-                    <div class="fgroup">
-                        <div class="username-field">
-                            <span>@</span>
-                            <input type="text" id="dr-uname-in" placeholder="username">
-                        </div>
-                    </div>
                 </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Display Name</p>
+                    <input type="text" id="dr-name-in" class="finput" style="padding: 12px 20px; margin-bottom: 15px;" placeholder="Full Name">
+                    
+                    <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Username</p>
+                    <div class="username-field" style="margin-bottom: 15px;">
+                        <span>@</span>
+                        <input type="text" id="dr-uname-in" placeholder="username">
+                    </div>
+
+                    <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Bio</p>
+                    <input type="text" id="dr-bio-in" class="finput" style="padding: 12px 20px; margin-bottom: 15px;" placeholder="Available">
+                    
+                    <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Email</p>
+                    <p id="dr-email-display" style="font-size: 14px; font-weight: 500; color: var(--text-main); margin-bottom: 15px; padding-left: 5px;">-</p>
+                </div>
+
                 <button class="btn" onclick="updateProfileData()" style="margin-bottom: 15px;">Save Profile</button>
-                <button class="btn" style="background:var(--bg-base); color:var(--text-main);" onclick="changePasswordPrompt()">Change Password</button>
+                <button class="btn" style="background:var(--bg-base); color:var(--text-main); margin-bottom: 15px;" onclick="changePasswordPrompt()">Change Password</button>
                 <button class="btn" style="background:rgba(255, 75, 75, 0.1); color:var(--danger); margin-top:auto;" onclick="logout()">Log Out</button>
             </div>
 
@@ -232,14 +261,8 @@
                 </div>
             </div>
 
-            <div class="sb-tabs">
-                <div class="sb-tab active">All Chats</div>
-                <div class="sb-tab">Groups</div>
-                <div class="sb-tab">Contacts</div>
-            </div>
-
             <div class="search-bar" id="search-bar">
-                <input type="text" id="search-input" class="finput" style="padding:12px 20px; border-radius:30px;" placeholder="Search username or email...">
+                <input type="text" id="search-input" class="finput" style="padding:14px 20px; border-radius:30px;" placeholder="Search username or email...">
             </div>
 
             <div class="contact-list" id="contact-list"></div>
@@ -255,8 +278,8 @@
             <div id="active-chat" style="display:none; flex-direction:column; height:100%;">
                 
                 <div class="chat-header">
-                    <div class="ch-left">
-                        <button id="back-btn" onclick="closeChat()">‹</button>
+                    <div class="ch-left" onclick="openContactProfile()">
+                        <button id="back-btn" onclick="closeChat(event)">‹</button>
                         <div class="av" id="chat-av" style="width:46px; height:46px;">?</div>
                         <div class="ch-info">
                             <div class="ch-name" id="chat-name">Name</div>
@@ -305,13 +328,14 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth(), db = firebase.database(), storage = firebase.storage();
 
 // Global State
-let myUser=null, activeChatUid=null, activeChatId=null, messagesRef=null, presenceRef=null;
-let myProfileData = { name: 'User', photo: '', username: '' }; // Cached locally to prevent DB overwrites
+let myUser=null, activeChatUid=null, activeChatId=null, messagesRef=null, presenceRef=null, activeProfileRef=null;
+let myProfileData = { name: 'User', photo: '', username: '', bio: '' }; 
 
 const G=id=>document.getElementById(id);
 function switchView(view){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));G('view-'+view).classList.add('active');}
+function openModal(id) { G(id).classList.add('active'); }
+function closeModal(id) { G(id).classList.remove('active'); }
 
-// Safe Time Formatter
 const formatTime = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -321,7 +345,6 @@ const formatTime = (ts) => {
     return d.toLocaleDateString([], {month: 'short', day: 'numeric'});
 };
 
-// UI Toggles
 function toggleDrawer(){ G('profile-drawer').classList.toggle('open'); }
 
 // --- AUTH LOGIC ---
@@ -340,7 +363,7 @@ async function loginWithGoogle(){
         const snap = await db.ref('users/'+u.uid).once('value');
         if(!snap.exists()){
             const genUname = (u.email.split('@')[0]+Math.floor(Math.random()*999)).replace(/[^a-z0-9]/g,'_');
-            await db.ref('users/'+u.uid).set({uid:u.uid, name:u.displayName||'User', username:genUname, email:u.email, photo:u.photoURL||'', online:true});
+            await db.ref('users/'+u.uid).set({uid:u.uid, name:u.displayName||'User', username:genUname, email:u.email, photo:u.photoURL||'', bio:'Available', online:true});
         }
     }catch(err){ alert(err.message); }
 }
@@ -359,7 +382,7 @@ async function register(){
         const cred = await auth.createUserWithEmailAndPassword(email,pass); await cred.user.sendEmailVerification();
         let photoUrl="";
         if(regFile){ const ref=storage.ref(`avatars/${cred.user.uid}`); await ref.put(regFile); photoUrl=await ref.getDownloadURL(); }
-        await db.ref('users/'+cred.user.uid).set({uid:cred.user.uid, name:name, username:(email.split('@')[0]+Math.floor(Math.random()*99)).replace(/[^a-z0-9]/g,'_'), email:email, photo:photoUrl, online:false});
+        await db.ref('users/'+cred.user.uid).set({uid:cred.user.uid, name:name, username:(email.split('@')[0]+Math.floor(Math.random()*99)).replace(/[^a-z0-9]/g,'_'), email:email, photo:photoUrl, bio:'Available', online:false});
         auth.signOut(); switchView('login'); alert('Verification email sent! Please check your inbox.');
     }catch(e){ alert(e.message); }
 }
@@ -368,27 +391,29 @@ async function login(){ const e=G('log-email').value, p=G('log-pass').value; try
 async function forgotPassword(){ const e=G('log-email').value; if(!e)return alert('Enter email first'); try{ await auth.sendPasswordResetEmail(e); alert('Password reset sent!'); }catch(err){ alert(err.message); } }
 function logout(){ db.ref('users/'+myUser.uid+'/online').set(false); auth.signOut(); }
 
-// --- APP INIT (FIXED SANITIZATION) ---
+// --- APP INIT ---
 function initApp(){
     db.ref('users/'+myUser.uid).on('value',snap=>{
         const d = snap.val() || {}; 
         
-        // Strict sanitization to block literal "undefined" strings
         let sName = (d.name && d.name !== 'undefined') ? d.name : (myUser.displayName || 'User');
         let sPhoto = (d.photo && d.photo !== 'undefined') ? d.photo : (myUser.photoURL || '');
         let sUname = (d.username && d.username !== 'undefined') ? d.username : '';
+        let sBio = d.bio || 'Available';
+        let sEmail = d.email || myUser.email || '';
 
-        // Auto-fix missing usernames
         if(!sUname) {
-            sUname = (myUser.email ? myUser.email.split('@')[0] : 'user') + Math.floor(Math.random()*999);
+            sUname = (sEmail ? sEmail.split('@')[0] : 'user') + Math.floor(Math.random()*999);
             db.ref('users/'+myUser.uid).update({username: sUname, name: sName});
         }
 
-        myProfileData = { name: sName, photo: sPhoto, username: sUname };
+        myProfileData = { name: sName, photo: sPhoto, username: sUname, bio: sBio };
 
         G('sb-my-name').innerText = sName;
         G('dr-name-in').value = sName; 
         G('dr-uname-in').value = sUname;
+        G('dr-bio-in').value = sBio;
+        G('dr-email-display').innerText = sEmail;
         G('dr-av').innerHTML = sPhoto ? `<img src="${sPhoto}">` : sName.charAt(0).toUpperCase();
     });
     
@@ -404,16 +429,17 @@ G('dr-photo').onchange=async e=>{
 
 function updateProfileData() { 
     const newName = G('dr-name-in').value.trim();
+    const newBio = G('dr-bio-in').value.trim();
     let newUname = G('dr-uname-in').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     if(!newName || !newUname) return alert("Name and username cannot be empty.");
     
-    db.ref('users/'+myUser.uid).update({ name: newName, username: newUname }).then(()=>{
+    db.ref('users/'+myUser.uid).update({ name: newName, username: newUname, bio: newBio }).then(()=>{
         alert("Profile updated successfully!"); toggleDrawer();
     }).catch(err => alert(err.message));
 }
 async function changePasswordPrompt(){ const p=prompt("New password (min 6):"); if(p&&p.length>=6){ try{ await myUser.updatePassword(p); alert("Updated!"); }catch(e){ alert(e.message); } } }
 
-// --- SIDEBAR DATA (FIXED SEARCH) ---
+// --- SIDEBAR DATA & SEARCH ---
 G('search-input').oninput = async e => {
     let q = e.target.value.toLowerCase().trim();
     if(q.length === 0) return loadRecentChats();
@@ -441,7 +467,7 @@ G('search-input').oninput = async e => {
             const safeUname = (u.username && u.username !== 'undefined') ? u.username : 'user';
             const av = (u.photo && u.photo !== 'undefined') ? `<img src="${u.photo}">` : safeName.charAt(0).toUpperCase();
             
-            html += `<div class="c-item" onclick="openChat('${u.uid}','${safeName}','${u.photo||''}')">
+            html += `<div class="c-item" onclick="openChat('${u.uid}')">
                         <div class="av">${av}</div>
                         <div class="c-info">
                             <div class="c-name-row"><span class="c-name">${safeName}</span></div>
@@ -462,7 +488,7 @@ function loadRecentChats(){
             const safeName = (c.name && c.name !== 'undefined') ? c.name : 'Unknown User';
             const av = (c.photo && c.photo !== 'undefined') ? `<img src="${c.photo}">` : safeName.charAt(0).toUpperCase();
             const badge = c.unreadCount>0 ? `<div class="unread-badge">${c.unreadCount}</div>` : '';
-            html+=`<div class="c-item" onclick="openChat('${c.id}','${safeName}','${c.photo||''}')">
+            html+=`<div class="c-item" onclick="openChat('${c.id}')">
                 <div class="av">${av}</div>
                 <div class="c-info">
                     <div class="c-name-row"><span class="c-name">${safeName}</span><span class="c-time">${formatTime(c.timestamp)}</span></div>
@@ -474,30 +500,33 @@ function loadRecentChats(){
     });
 }
 
-// --- CHAT LOGIC ---
-function openChat(uid,name,photo){
+// --- CHAT LOGIC (DYNAMIC PROFILE FETCHING) ---
+function openChat(uid){
     activeChatUid=uid; activeChatId=[myUser.uid,uid].sort().join('_');
     G('empty-state').style.display='none'; G('active-chat').style.display='flex';
     
-    // Safely apply name and photo to header
-    const safeName = (name && name !== 'undefined') ? name : 'Unknown User';
-    G('chat-name').innerText = safeName; 
-    G('chat-av').innerHTML = (photo && photo !== 'undefined') ? `<img src="${photo}">` : safeName.charAt(0).toUpperCase();
-    
     if(window.innerWidth<=768){ G('sidebar').classList.add('hide'); G('chat-main').classList.add('active'); }
     
-    if(messagesRef)messagesRef.off(); if(presenceRef)presenceRef.off();
+    if(messagesRef)messagesRef.off(); if(presenceRef)presenceRef.off(); if(activeProfileRef)activeProfileRef.off();
     db.ref(`chats/${myUser.uid}/${uid}`).update({unreadCount:0});
 
-    // Safe Last Seen Formatter
-    presenceRef=db.ref('users/'+uid); presenceRef.on('value',snap=>{
-        const d=snap.val()||{}; 
+    // Dynamically fetch Target Profile for the Header
+    activeProfileRef = db.ref('users/'+uid);
+    activeProfileRef.on('value', snap => {
+        const u = snap.val() || {};
+        const safeName = (u.name && u.name !== 'undefined') ? u.name : 'Unknown User';
+        const safePhoto = (u.photo && u.photo !== 'undefined') ? u.photo : '';
+        
+        G('chat-name').innerText = safeName;
+        G('chat-av').innerHTML = safePhoto ? `<img src="${safePhoto}">` : safeName.charAt(0).toUpperCase();
+        
         let statusText = 'Offline';
-        if(d.online) { statusText = 'Online'; G('chat-status').style.color='var(--success)'; }
-        else if (d.lastSeen) { statusText = 'Last seen ' + formatTime(d.lastSeen); G('chat-status').style.color='var(--text-muted)'; }
+        if(u.online) { statusText = 'Online'; G('chat-status').style.color='var(--success)'; }
+        else if (u.lastSeen) { statusText = 'Last seen ' + formatTime(u.lastSeen); G('chat-status').style.color='var(--text-muted)'; }
         G('chat-status').innerText = statusText;
     });
     
+    // Messages Fetching
     messagesRef=db.ref('messages/'+activeChatId); messagesRef.on('value',snap=>{
         let html='';
         snap.forEach(m=>{
@@ -511,7 +540,26 @@ function openChat(uid,name,photo){
     });
 }
 
-function closeChat(){ G('sidebar').classList.remove('hide'); G('chat-main').classList.remove('active'); G('empty-state').style.display='flex'; G('active-chat').style.display='none'; activeChatUid=null; activeChatId=null; }
+function openContactProfile() {
+    if(!activeChatUid) return;
+    openModal('modal-profile');
+    db.ref('users/'+activeChatUid).once('value', snap => {
+        const u = snap.val() || {};
+        const name = (u.name && u.name !== 'undefined') ? u.name : 'Unknown User';
+        G('m-prof-name').innerText = name;
+        G('m-prof-uname').innerText = '@' + (u.username || 'user');
+        G('m-prof-email').innerText = u.email || 'Hidden by user';
+        G('m-prof-bio').innerText = u.bio || 'Available';
+        G('m-prof-av').innerHTML = (u.photo && u.photo !== 'undefined') ? `<img src="${u.photo}">` : name.charAt(0).toUpperCase();
+    });
+}
+
+function closeChat(e){ 
+    e.stopPropagation(); // Prevent opening profile modal when clicking back
+    G('sidebar').classList.remove('hide'); G('chat-main').classList.remove('active'); 
+    G('empty-state').style.display='flex'; G('active-chat').style.display='none'; 
+    activeChatUid=null; activeChatId=null; 
+}
 
 function sendMessage(imgUrl=null){
     const text=G('msg-input').value.trim(); if(!text && !imgUrl)return;
@@ -522,7 +570,6 @@ function sendMessage(imgUrl=null){
     db.ref('messages/'+activeChatId).push(payload);
     const displayMsg = imgUrl ? '📷 Photo' : text;
     
-    // Using cached `myProfileData` ensures we never write DOM bugs to the DB
     db.ref(`chats/${myUser.uid}/${activeChatUid}`).update({name:G('chat-name').innerText, photo:G('chat-av').innerHTML.includes('img')?G('chat-av').querySelector('img').src:'', lastMessage:displayMsg, timestamp:ts, unreadCount:0});
     db.ref(`chats/${activeChatUid}/${myUser.uid}`).once('value',snap=>{
         const currentUnread=snap.exists()?(snap.val().unreadCount||0):0;
