@@ -97,8 +97,12 @@
         .chat-main { flex: 1; display: flex; flex-direction: column; position: relative; background: var(--bg-base); }
         
         .chat-header { height: 90px; background: var(--bg-panel); border-bottom-left-radius: 40px; display: flex; align-items: center; padding: 0 30px; justify-content: space-between; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .ch-left { display: flex; align-items: center; gap: 15px; overflow: hidden; cursor: pointer; padding: 5px; border-radius: var(--radius-lg); transition: 0.2s; }
-        .ch-left:hover { background: rgba(255,255,255,0.03); }
+        .ch-left { display: flex; align-items: center; gap: 15px; overflow: hidden; }
+        
+        /* Clickable Profile Area */
+        .profile-click-zone { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 5px; border-radius: var(--radius-lg); transition: 0.2s; }
+        .profile-click-zone:hover { background: rgba(255,255,255,0.03); }
+        
         .ch-info { display: flex; flex-direction: column; overflow: hidden; }
         .ch-name { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ch-status { font-size: 12px; color: var(--accent); font-weight: 500; }
@@ -134,13 +138,14 @@
         .username-field span { color: var(--accent); font-weight: 600; font-size: 14px; }
         .username-field input { border: none; background: transparent; padding: 16px 5px; flex: 1; outline: none; color: #fff; font-size: 14px; }
 
-        #back-btn { display: none; background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; margin-right: 5px; }
+        /* Mobile */
+        #back-btn { display: none; background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
         @media (max-width: 768px) {
             .sidebar { width: 100%; border-right: none; position: absolute; height: 100%; transition: 0.3s transform; }
             .sidebar.hide { transform: translateX(-100%); }
             .chat-main { width: 100%; position: absolute; height: 100%; transform: translateX(100%); transition: 0.3s transform; }
             .chat-main.active { transform: translateX(0); }
-            #back-btn { display: block; }
+            #back-btn { display: block; margin-right: 5px; }
             .chat-header { border-bottom-left-radius: 0; padding: 0 20px; }
             .chat-footer { padding: 15px 20px 20px; }
             .sb-header { padding: 25px 20px 20px; }
@@ -163,6 +168,8 @@
             <p style="color:var(--text-muted); font-size:12px; margin-bottom: 5px;">Bio</p>
             <p id="m-prof-bio" style="font-size:14px; font-weight: 500; line-height: 1.5;">Available</p>
         </div>
+        
+        <button class="btn" style="margin-top: 20px;" onclick="closeModal('modal-profile')">Send Message</button>
     </div>
 </div>
 
@@ -262,7 +269,7 @@
             </div>
 
             <div class="search-bar" id="search-bar">
-                <input type="text" id="search-input" class="finput" style="padding:14px 20px; border-radius:30px;" placeholder="Search username or email...">
+                <input type="text" id="search-input" class="finput" style="padding:14px 20px; border-radius:30px;" placeholder="Search Name, @username, or Email...">
             </div>
 
             <div class="contact-list" id="contact-list"></div>
@@ -278,12 +285,14 @@
             <div id="active-chat" style="display:none; flex-direction:column; height:100%;">
                 
                 <div class="chat-header">
-                    <div class="ch-left" onclick="openContactProfile()">
-                        <button id="back-btn" onclick="closeChat(event)">‹</button>
-                        <div class="av" id="chat-av" style="width:46px; height:46px;">?</div>
-                        <div class="ch-info">
-                            <div class="ch-name" id="chat-name">Name</div>
-                            <div class="ch-status" id="chat-status">Offline</div>
+                    <div class="ch-left">
+                        <button id="back-btn" onclick="closeChat()">‹</button>
+                        <div class="profile-click-zone" onclick="openContactProfile()">
+                            <div class="av" id="chat-av" style="width:46px; height:46px;">?</div>
+                            <div class="ch-info">
+                                <div class="ch-name" id="chat-name">Name</div>
+                                <div class="ch-status" id="chat-status">Offline</div>
+                            </div>
                         </div>
                     </div>
                     <div class="ch-actions">
@@ -336,6 +345,31 @@ function switchView(view){document.querySelectorAll('.view').forEach(v=>v.classL
 function openModal(id) { G(id).classList.add('active'); }
 function closeModal(id) { G(id).classList.remove('active'); }
 
+// --- DATA PARSER (Fixes old accounts vs new accounts) ---
+function parseUser(u) {
+    if(!u) return {};
+    let name = u.name || u.display_name || u.displayName || 'Unknown User';
+    if (name === 'undefined') name = 'Unknown User';
+    
+    let photo = u.photo || u.avatar_url || u.photoURL || '';
+    if (photo === 'undefined') photo = '';
+    
+    let username = u.username || 'user';
+    if (username === 'undefined') username = 'user';
+    
+    return {
+        uid: u.uid,
+        name: name,
+        photo: photo,
+        username: username,
+        email: u.email || '',
+        bio: u.bio || 'Available',
+        online: !!u.online,
+        lastSeen: u.lastSeen || null
+    };
+}
+
+// Safe Time Formatter
 const formatTime = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -394,27 +428,25 @@ function logout(){ db.ref('users/'+myUser.uid+'/online').set(false); auth.signOu
 // --- APP INIT ---
 function initApp(){
     db.ref('users/'+myUser.uid).on('value',snap=>{
-        const d = snap.val() || {}; 
+        const u = parseUser(snap.val());
         
-        let sName = (d.name && d.name !== 'undefined') ? d.name : (myUser.displayName || 'User');
-        let sPhoto = (d.photo && d.photo !== 'undefined') ? d.photo : (myUser.photoURL || '');
-        let sUname = (d.username && d.username !== 'undefined') ? d.username : '';
-        let sBio = d.bio || 'Available';
-        let sEmail = d.email || myUser.email || '';
-
-        if(!sUname) {
-            sUname = (sEmail ? sEmail.split('@')[0] : 'user') + Math.floor(Math.random()*999);
-            db.ref('users/'+myUser.uid).update({username: sUname, name: sName});
+        if(u.username === 'user' && myUser.email) {
+            u.username = (myUser.email.split('@')[0] + Math.floor(Math.random()*999)).replace(/[^a-z0-9]/g,'_');
+            db.ref('users/'+myUser.uid).update({username: u.username});
+        }
+        if(!u.email && myUser.email) {
+            u.email = myUser.email;
+            db.ref('users/'+myUser.uid).update({email: u.email});
         }
 
-        myProfileData = { name: sName, photo: sPhoto, username: sUname, bio: sBio };
+        myProfileData = u;
 
-        G('sb-my-name').innerText = sName;
-        G('dr-name-in').value = sName; 
-        G('dr-uname-in').value = sUname;
-        G('dr-bio-in').value = sBio;
-        G('dr-email-display').innerText = sEmail;
-        G('dr-av').innerHTML = sPhoto ? `<img src="${sPhoto}">` : sName.charAt(0).toUpperCase();
+        G('sb-my-name').innerText = u.name;
+        G('dr-name-in').value = u.name; 
+        G('dr-uname-in').value = u.username;
+        G('dr-bio-in').value = u.bio;
+        G('dr-email-display').innerText = u.email;
+        G('dr-av').innerHTML = u.photo ? `<img src="${u.photo}">` : u.name.charAt(0).toUpperCase();
     });
     
     const myOnlineRef=db.ref('users/'+myUser.uid+'/online'), myLastSeenRef=db.ref('users/'+myUser.uid+'/lastSeen');
@@ -439,44 +471,38 @@ function updateProfileData() {
 }
 async function changePasswordPrompt(){ const p=prompt("New password (min 6):"); if(p&&p.length>=6){ try{ await myUser.updatePassword(p); alert("Updated!"); }catch(e){ alert(e.message); } } }
 
-// --- SIDEBAR DATA & SEARCH ---
-G('search-input').oninput = async e => {
+// --- CLIENT-SIDE UNIFIED SEARCH (Fixes Case Sensitivity & Email Search) ---
+G('search-input').oninput = e => {
     let q = e.target.value.toLowerCase().trim();
     if(q.length === 0) return loadRecentChats();
-    
-    let qUser = q.startsWith('@') ? q.substring(1) : q;
 
-    try {
-        const [snapUser, snapEmail] = await Promise.all([
-            db.ref('users').orderByChild('username').startAt(qUser).endAt(qUser + "\uf8ff").once('value'),
-            db.ref('users').orderByChild('email').startAt(q).endAt(q + "\uf8ff").once('value')
-        ]);
-
-        const results = new Map();
-        const process = (snap) => {
-            snap.forEach(c => {
-                const u = c.val();
-                if (u.uid !== myUser.uid && !results.has(u.uid)) results.set(u.uid, u);
-            });
-        };
-        process(snapUser); process(snapEmail);
-
+    // Pull all users to do a robust, case-insensitive, multi-field search locally
+    db.ref('users').once('value', snap => {
         let html = '';
-        results.forEach(u => {
-            const safeName = (u.name && u.name !== 'undefined') ? u.name : 'Unknown User';
-            const safeUname = (u.username && u.username !== 'undefined') ? u.username : 'user';
-            const av = (u.photo && u.photo !== 'undefined') ? `<img src="${u.photo}">` : safeName.charAt(0).toUpperCase();
+        let found = false;
+        
+        snap.forEach(c => {
+            const u = parseUser(c.val());
+            if (u.uid === myUser.uid) return;
             
-            html += `<div class="c-item" onclick="openChat('${u.uid}')">
-                        <div class="av">${av}</div>
-                        <div class="c-info">
-                            <div class="c-name-row"><span class="c-name">${safeName}</span></div>
-                            <div class="c-msg-row"><span class="c-msg">@${safeUname}</span></div>
-                        </div>
-                     </div>`;
+            // Search across Name, Username, AND Email simultaneously
+            const searchStr = `${u.name} @${u.username} ${u.email}`.toLowerCase();
+            
+            if (searchStr.includes(q)) {
+                found = true;
+                const av = u.photo ? `<img src="${u.photo}">` : u.name.charAt(0).toUpperCase();
+                html += `<div class="c-item" onclick="openChat('${u.uid}')">
+                            <div class="av">${av}</div>
+                            <div class="c-info">
+                                <div class="c-name-row"><span class="c-name">${u.name}</span></div>
+                                <div class="c-msg-row"><span class="c-msg">@${u.username}</span></div>
+                            </div>
+                         </div>`;
+            }
         });
-        G('contact-list').innerHTML = html || '<div style="text-align:center; padding:20px; color:var(--text-muted)">No users found</div>';
-    } catch (err) { console.error("Search Error:", err); }
+        
+        G('contact-list').innerHTML = found ? html : '<div style="text-align:center; padding:20px; color:var(--text-muted)">No users found</div>';
+    });
 };
 
 function loadRecentChats(){
@@ -485,6 +511,7 @@ function loadRecentChats(){
         let chats=[]; snap.forEach(c=>{chats.push({id:c.key,...c.val()});}); chats.reverse();
         let html='';
         chats.forEach(c=>{
+            // Safely parse recent chat preview
             const safeName = (c.name && c.name !== 'undefined') ? c.name : 'Unknown User';
             const av = (c.photo && c.photo !== 'undefined') ? `<img src="${c.photo}">` : safeName.charAt(0).toUpperCase();
             const badge = c.unreadCount>0 ? `<div class="unread-badge">${c.unreadCount}</div>` : '';
@@ -510,15 +537,13 @@ function openChat(uid){
     if(messagesRef)messagesRef.off(); if(presenceRef)presenceRef.off(); if(activeProfileRef)activeProfileRef.off();
     db.ref(`chats/${myUser.uid}/${uid}`).update({unreadCount:0});
 
-    // Dynamically fetch Target Profile for the Header
+    // 1. Fetch exact profile data live from the DB (Fixes Unknown User / Missing Photo in Header)
     activeProfileRef = db.ref('users/'+uid);
     activeProfileRef.on('value', snap => {
-        const u = snap.val() || {};
-        const safeName = (u.name && u.name !== 'undefined') ? u.name : 'Unknown User';
-        const safePhoto = (u.photo && u.photo !== 'undefined') ? u.photo : '';
+        const u = parseUser(snap.val());
         
-        G('chat-name').innerText = safeName;
-        G('chat-av').innerHTML = safePhoto ? `<img src="${safePhoto}">` : safeName.charAt(0).toUpperCase();
+        G('chat-name').innerText = u.name;
+        G('chat-av').innerHTML = u.photo ? `<img src="${u.photo}">` : u.name.charAt(0).toUpperCase();
         
         let statusText = 'Offline';
         if(u.online) { statusText = 'Online'; G('chat-status').style.color='var(--success)'; }
@@ -526,7 +551,7 @@ function openChat(uid){
         G('chat-status').innerText = statusText;
     });
     
-    // Messages Fetching
+    // 2. Load Messages
     messagesRef=db.ref('messages/'+activeChatId); messagesRef.on('value',snap=>{
         let html='';
         snap.forEach(m=>{
@@ -543,19 +568,18 @@ function openChat(uid){
 function openContactProfile() {
     if(!activeChatUid) return;
     openModal('modal-profile');
+    
     db.ref('users/'+activeChatUid).once('value', snap => {
-        const u = snap.val() || {};
-        const name = (u.name && u.name !== 'undefined') ? u.name : 'Unknown User';
-        G('m-prof-name').innerText = name;
-        G('m-prof-uname').innerText = '@' + (u.username || 'user');
+        const u = parseUser(snap.val());
+        G('m-prof-name').innerText = u.name;
+        G('m-prof-uname').innerText = '@' + u.username;
         G('m-prof-email').innerText = u.email || 'Hidden by user';
-        G('m-prof-bio').innerText = u.bio || 'Available';
-        G('m-prof-av').innerHTML = (u.photo && u.photo !== 'undefined') ? `<img src="${u.photo}">` : name.charAt(0).toUpperCase();
+        G('m-prof-bio').innerText = u.bio;
+        G('m-prof-av').innerHTML = u.photo ? `<img src="${u.photo}">` : u.name.charAt(0).toUpperCase();
     });
 }
 
-function closeChat(e){ 
-    e.stopPropagation(); // Prevent opening profile modal when clicking back
+function closeChat(){ 
     G('sidebar').classList.remove('hide'); G('chat-main').classList.remove('active'); 
     G('empty-state').style.display='flex'; G('active-chat').style.display='none'; 
     activeChatUid=null; activeChatId=null; 
@@ -570,6 +594,7 @@ function sendMessage(imgUrl=null){
     db.ref('messages/'+activeChatId).push(payload);
     const displayMsg = imgUrl ? '📷 Photo' : text;
     
+    // Write clean parsed data to recents list
     db.ref(`chats/${myUser.uid}/${activeChatUid}`).update({name:G('chat-name').innerText, photo:G('chat-av').innerHTML.includes('img')?G('chat-av').querySelector('img').src:'', lastMessage:displayMsg, timestamp:ts, unreadCount:0});
     db.ref(`chats/${activeChatUid}/${myUser.uid}`).once('value',snap=>{
         const currentUnread=snap.exists()?(snap.val().unreadCount||0):0;
