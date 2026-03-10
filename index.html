@@ -1,316 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>DummyTalk | Premium Messaging</title>
-<style>
-:root {
-  --bg: #0e1621;
-  --sidebar: #17212b;
-  --header: #17212b;
-  --accent: #2481cc;
-  --accent-hover: #288fde;
-  --sent: #2b5278;
-  --recv: #182533;
-  --text: #f5f5f5;
-  --text-muted: #708499;
-  --border: #1c2733;
-  --success: #4dde9c;
-  --danger: #ef5350;
-  --radius: 12px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>DummyTalk | Premium</title>
+    <style>
+        :root {
+            --bg: #0e1621; --sidebar: #17212b; --header: #17212b; --accent: #2481cc;
+            --sent: #2b5278; --recv: #182533; --text: #f5f5f5; --text-muted: #708499;
+            --border: #1c2733; --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+        /* Sidebar & Profile Drawer */
+        .sidebar { width: 320px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: relative; transition: 0.3s; }
+        .drawer { position: absolute; top: 0; left: -320px; width: 320px; height: 100%; background: var(--sidebar); z-index: 100; transition: 0.3s; padding: 20px; border-right: 1px solid var(--border); }
+        .drawer.open { left: 0; }
 
-/* Views & Animations */
-.view { display: none; height: 100vh; width: 100vw; position: fixed; inset: 0; animation: fadeIn 0.3s ease; }
-.view.active { display: flex; }
-@keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        /* Search Bar */
+        .search-container { padding: 10px; background: var(--sidebar); border-bottom: 1px solid var(--border); }
+        .search-input { width: 100%; background: #242f3d; border: none; padding: 10px 15px; border-radius: 20px; color: #fff; outline: none; }
 
-/* Auth Components */
-#view-login, #view-register { justify-content: center; align-items: center; background: radial-gradient(circle at top right, #1a2d42, #0e1621); }
-.auth-card { width: 100%; max-width: 360px; padding: 30px; text-align: center; }
-.auth-logo { font-size: 4rem; margin-bottom: 20px; display: block; }
-.auth-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
-.auth-sub { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; }
+        /* Profile Header in Drawer */
+        .profile-header { text-align: center; margin-bottom: 30px; }
+        .av-large { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; overflow: hidden; }
+        .av-large img { width: 100%; height: 100%; object-fit: cover; }
 
-.fgroup { text-align: left; margin-bottom: 15px; position: relative; }
-.finput { width: 100%; background: #1c2733; border: 1px solid #2b3a4a; padding: 12px 16px; border-radius: var(--radius); color: #fff; font-size: 1rem; outline: none; transition: border 0.2s; }
-.finput:focus { border-color: var(--accent); }
+        /* Chat Window */
+        .chat-main { flex: 1; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; background-color: rgba(14, 22, 33, 0.95); }
+        .msg-list { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* Bubbles & Ticks */
+        .bubble { max-width: 75%; padding: 8px 12px; border-radius: 15px; position: relative; font-size: 0.95rem; }
+        .mine { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 4px; }
+        .theirs { align-self: flex-start; background: var(--recv); border-bottom-left-radius: 4px; }
+        .tick { font-size: 0.7rem; margin-left: 5px; opacity: 0.7; }
+        .read { color: #4dde9c; } /* Double tick color */
 
-.btn { width: 100%; padding: 12px; border-radius: var(--radius); border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 1rem; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-link { background: none; color: var(--accent); font-size: 0.85rem; margin-top: 10px; }
+        .item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .item:hover { background: #242f3d; }
+        .av-small { width: 45px; height: 45px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .btn-action { width: 100%; padding: 12px; background: #242f3d; border: none; color: #fff; margin-top: 10px; border-radius: 8px; cursor: pointer; text-align: left; }
+        .btn-action:hover { background: #2b3a4a; }
 
-/* Multi-step Logic */
-.reg-step { display: none; }
-.reg-step.active { display: block; animation: slideIn 0.3s ease; }
-@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-
-/* Chat Layout */
-#view-chat { flex-direction: row; }
-.sidebar { width: 320px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-.chat-main { flex: 1; display: flex; flex-direction: column; position: relative; }
-
-/* Header */
-.header { height: 56px; background: var(--header); display: flex; align-items: center; padding: 0 16px; gap: 12px; border-bottom: 1px solid var(--border); }
-.av-small { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; }
-.av-small img { width: 100%; height: 100%; object-fit: cover; }
-
-/* Messages */
-.msg-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 4px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; background-color: rgba(14, 22, 33, 0.9); }
-.bubble { max-width: 70%; padding: 8px 14px; border-radius: 18px; position: relative; font-size: 0.95rem; line-height: 1.4; }
-.mine { align-self: flex-end; background: var(--sent); color: #fff; border-bottom-right-radius: 4px; }
-.theirs { align-self: flex-start; background: var(--recv); color: #fff; border-bottom-left-radius: 4px; }
-
-/* Footer Input */
-.input-area { padding: 10px 16px; background: var(--header); display: flex; gap: 10px; align-items: center; }
-.msg-input { flex: 1; background: #1c2733; border: none; padding: 12px 16px; border-radius: 22px; color: #fff; outline: none; }
-
-/* Profile Preview */
-.photo-preview { width: 100px; height: 100px; border-radius: 50%; background: #2b3a4a; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 2px dashed var(--accent); cursor: pointer; overflow: hidden; }
-.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-
-.alert { font-size: 0.8rem; margin-top: 10px; display: none; padding: 8px; border-radius: 8px; }
-.err { background: rgba(239, 83, 80, 0.1); color: var(--danger); }
-.ok { background: rgba(77, 222, 156, 0.1); color: var(--success); }
-
-@media (max-width: 768px) {
-    .sidebar { width: 100%; }
-    .chat-main { display: none; }
-    .chat-main.active { display: flex; position: fixed; inset: 0; z-index: 100; }
-}
-</style>
+        #view-auth { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+    </style>
 </head>
 <body>
 
-<div class="view active" id="view-login">
-  <div class="auth-card">
-    <span class="auth-logo">💬</span>
-    <h2 class="auth-title">Sign in</h2>
-    <p class="auth-sub">Enter your email and password to continue</p>
-    
-    <div class="fgroup">
-      <input type="email" id="login-email" class="finput" placeholder="Email address">
-    </div>
-    <div class="fgroup">
-      <input type="password" id="login-pass" class="finput" placeholder="Password">
-    </div>
-    
-    <button class="btn btn-primary" id="btn-login">Next</button>
-    <button class="btn btn-link" id="btn-forgot">Forgot password?</button>
-    <div id="login-alert" class="alert err"></div>
-    <p class="auth-sub" style="margin-top:20px">Don't have an account? <a href="#" id="go-reg" style="color:var(--accent)">Register</a></p>
-  </div>
-</div>
-
-<div class="view" id="view-register">
-  <div class="auth-card">
-    <span class="auth-logo">✨</span>
-    <h2 class="auth-title">Create Account</h2>
-    
-    <div class="reg-step active" id="step-1">
-      <p class="auth-sub">What is your email address?</p>
-      <div class="fgroup">
-        <input type="email" id="reg-email" class="finput" placeholder="Email">
-      </div>
-      <div class="fgroup">
-        <input type="password" id="reg-pass" class="finput" placeholder="Password (min. 6 characters)">
-      </div>
-      <button class="btn btn-primary" onclick="toStep(2)">Next</button>
-    </div>
-
-    <div class="reg-step" id="step-2">
-      <p class="auth-sub">Choose how others see you</p>
-      <div class="fgroup">
-        <input type="text" id="reg-name" class="finput" placeholder="Full Name">
-      </div>
-      <div class="fgroup">
-        <input type="text" id="reg-username" class="finput" placeholder="Username">
-      </div>
-      <button class="btn btn-primary" onclick="toStep(3)">Next</button>
-    </div>
-
-    <div class="reg-step" id="step-3">
-      <p class="auth-sub">Add a profile picture (optional)</p>
-      <label for="reg-photo-input">
-        <div class="photo-preview" id="photo-preview-el">➕</div>
-      </label>
-      <input type="file" id="reg-photo-input" hidden accept="image/*">
-      <button class="btn btn-primary" id="btn-finalize">Complete Registration</button>
-    </div>
-
-    <div id="reg-alert" class="alert err"></div>
-    <button class="btn btn-link" id="go-login">Back to Sign In</button>
-  </div>
-</div>
-
-<div class="view" id="view-chat">
-  <div class="sidebar">
-    <div class="header">
-        <div class="av-small" id="my-profile-av">?</div>
-        <div style="flex:1; font-weight:600">Chats</div>
-        <button id="btn-logout" style="background:none; border:none; color:var(--text-muted); cursor:pointer">Logout</button>
-    </div>
-    <div id="conversations" style="flex:1; overflow-y:auto;">
+<div id="view-chat" style="display:flex; width: 100%;">
+    <div class="sidebar">
+        <div class="drawer" id="profile-drawer">
+            <button onclick="toggleDrawer()" style="background:none; border:none; color:var(--accent); cursor:pointer; margin-bottom:20px;">← Back</button>
+            <div class="profile-header">
+                <div class="av-large" id="dr-photo">?</div>
+                <h3 id="dr-name">User Name</h3>
+                <p id="dr-uname" style="color:var(--text-muted)">@username</p>
+            </div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Email</p>
+            <p id="dr-email" style="margin-bottom:20px;">email@example.com</p>
+            
+            <button class="btn-action" onclick="changePassword()">🔑 Change Password</button>
+            <button class="btn-action" onclick="logout()" style="color:var(--danger)">🚪 Logout</button>
         </div>
-  </div>
-  <div class="chat-main" id="chat-window">
-    <div class="header" id="chat-header">
-        <div class="av-small" id="target-av">?</div>
-        <div>
-            <div id="target-name" style="font-weight:600; font-size:0.95rem">Select a chat</div>
-            <div id="target-status" style="font-size:0.75rem; color:var(--text-muted)">offline</div>
+
+        <div class="header" style="height:60px; padding: 0 15px; display:flex; align-items:center; gap:15px; border-bottom:1px solid var(--border)">
+            <div class="av-small" id="my-av" onclick="toggleDrawer()" style="cursor:pointer">?</div>
+            <div style="font-weight:bold; flex:1">DummyTalk</div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" id="user-search" placeholder="Search by username...">
+        </div>
+        
+        <div id="contact-list" style="flex:1; overflow-y:auto;"></div>
+    </div>
+
+    <div class="chat-main">
+        <div class="header" style="height:60px; background:var(--header); padding:0 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border)">
+            <div class="av-small" id="chat-target-av">?</div>
+            <div>
+                <div id="chat-target-name" style="font-weight:600">Select a contact</div>
+                <div id="chat-target-status" style="font-size:0.75rem; color:var(--text-muted)">offline</div>
+            </div>
+        </div>
+
+        <div class="msg-list" id="msg-list"></div>
+
+        <div style="padding:15px; display:flex; gap:10px; background:var(--header)">
+            <input type="text" id="msg-input" class="search-input" placeholder="Write a message..." style="background:#1c2733">
+            <button id="send-btn" style="background:var(--accent); border:none; color:#fff; width:45px; border-radius:50%; cursor:pointer">➔</button>
         </div>
     </div>
-    <div class="msg-container" id="msg-list"></div>
-    <div class="input-area">
-        <input type="text" class="msg-input" id="msg-input" placeholder="Message">
-        <button id="btn-send" style="background:none; border:none; color:var(--accent); font-size:1.5rem; cursor:pointer">➔</button>
-    </div>
-  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
 <script>
-// --- CONFIG (Reusing your provided keys) ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAkizJq8d1CB84jhkejFRb8iFKnf_lsldg",
-  authDomain: "dummytalk-b540c.firebaseapp.com",
-  databaseURL: "https://dummytalk-b540c-default-rtdb.firebaseio.com",
-  projectId: "dummytalk-b540c",
-  storageBucket: "dummytalk-b540c.firebasestorage.app",
-  messagingSenderId: "513786860365",
-  appId: "1:513786860365:web:52e6f3110244d8dae65d04"
-};
+const firebaseConfig = { /* Your Config Here */ };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth(), db = firebase.database(), storage = firebase.storage();
+const auth = firebase.auth(), db = firebase.database();
 
-const G = id => document.getElementById(id);
-let selectedFile = null;
+let currentUser = null, activeChatId = null, targetUID = null;
 
-// --- VIEW ROUTER ---
-function showView(id) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    G('view-' + id).classList.add('active');
+// --- PROFILE DRAWER ---
+function toggleDrawer() { G('profile-drawer').classList.toggle('open'); }
+
+function loadMyProfile(user) {
+    db.ref('users/' + user.uid).on('value', snap => {
+        const d = snap.val();
+        G('my-av').innerHTML = d.photo ? `<img src="${d.photo}">` : d.name[0];
+        G('dr-photo').innerHTML = d.photo ? `<img src="${d.photo}">` : d.name[0];
+        G('dr-name').innerText = d.name;
+        G('dr-uname').innerText = '@' + d.username;
+        G('dr-email').innerText = d.email;
+    });
 }
 
-// --- AUTH LOGIC ---
-G('go-reg').onclick = () => showView('register');
-G('go-login').onclick = () => showView('login');
-
-// Step Navigation & Auto-Username
-function toStep(n) {
-    if(n === 2) {
-        const email = G('reg-email').value;
-        if(!email.includes('@')) return showAlert('reg-alert', 'Enter a valid email');
-        // Auto suggest username
-        G('reg-username').value = email.split('@')[0].replace(/[^a-z0-9]/g, '_') + Math.floor(Math.random()*999);
-    }
-    document.querySelectorAll('.reg-step').forEach(s => s.classList.remove('active'));
-    G('step-' + n).classList.add('active');
-}
-
-// Photo Preview
-G('reg-photo-input').onchange = e => {
-    selectedFile = e.target.files[0];
-    if(selectedFile) {
-        const reader = new FileReader();
-        reader.onload = ev => G('photo-preview-el').innerHTML = `<img src="${ev.target.result}">`;
-        reader.readAsDataURL(selectedFile);
-    }
-};
-
-// Finalize Register with Verification
-G('btn-finalize').onclick = async () => {
-    const email = G('reg-email').value, pass = G('reg-pass').value;
-    const name = G('reg-name').value, uname = G('reg-username').value;
-    
-    try {
-        const cred = await auth.createUserWithEmailAndPassword(email, pass);
-        await cred.user.sendEmailVerification();
-        
-        let photoUrl = "";
-        if(selectedFile) {
-            const ref = storage.ref(`avatars/${cred.user.uid}`);
-            await ref.put(selectedFile);
-            photoUrl = await ref.getDownloadURL();
-        }
-
-        await db.ref('users/' + cred.user.uid).set({
-            uid: cred.user.uid,
-            name: name,
-            username: uname,
-            email: email,
-            photo: photoUrl,
-            verified: false
+// --- SEARCH & CONTACTS ---
+G('user-search').oninput = (e) => {
+    const q = e.target.value.toLowerCase();
+    if(q.length < 2) return;
+    db.ref('users').orderByChild('username').startAt(q).limitToFirst(5).once('value', snap => {
+        let html = '';
+        snap.forEach(child => {
+            const u = child.val();
+            if(u.uid === auth.currentUser.uid) return;
+            html += `<div class="item" onclick="startChat('${u.uid}', '${u.name}', '${u.photo}')">
+                <div class="av-small">${u.photo ? `<img src="${u.photo}" style="width:100%; height:100%; border-radius:50%">` : u.name[0]}</div>
+                <div><b>${u.name}</b><br><small style="color:var(--text-muted)">@${u.username}</small></div>
+            </div>`;
         });
-
-        alert("Verification email sent! Please check your inbox before logging in.");
-        showView('login');
-    } catch(e) { showAlert('reg-alert', e.message); }
-};
-
-// Login with Verification Check
-G('btn-login').onclick = async () => {
-    const email = G('login-email').value, pass = G('login-pass').value;
-    try {
-        const res = await auth.signInWithEmailAndPassword(email, pass);
-        if(!res.user.emailVerified) {
-            showAlert('login-alert', 'Please verify your email address first.');
-            auth.signOut();
-            return;
-        }
-        showView('chat');
-        initChat(res.user);
-    } catch(e) { showAlert('login-alert', "Invalid credentials"); }
-};
-
-// Forgot Password
-G('btn-forgot').onclick = async () => {
-    const email = G('login-email').value;
-    if(!email) return showAlert('login-alert', "Enter email first");
-    try {
-        await auth.sendPasswordResetEmail(email);
-        alert("Password reset link sent to your email.");
-    } catch(e) { showAlert('login-alert', e.message); }
+        G('contact-list').innerHTML = html;
+    });
 };
 
 // --- CHAT LOGIC ---
-function initChat(user) {
-    db.ref('users/' + user.uid).on('value', snap => {
-        const d = snap.val();
-        if(d.photo) G('my-profile-av').innerHTML = `<img src="${d.photo}">`;
+function startChat(uid, name, photo) {
+    targetUID = uid;
+    activeChatId = [auth.currentUser.uid, uid].sort().join('_');
+    G('chat-target-name').innerText = name;
+    G('chat-target-av').innerHTML = photo ? `<img src="${photo}" style="width:100%; height:100%; border-radius:50%">` : name[0];
+    
+    // Listen for presence
+    db.ref('users/' + uid + '/online').on('value', s => {
+        G('chat-target-status').innerText = s.val() ? 'online' : 'offline';
+        G('chat-target-status').style.color = s.val() ? '#4dde9c' : '';
     });
-    // Add real-time message listeners, conversation loading, etc. here
+
+    loadMessages();
 }
 
-function showAlert(id, msg) {
-    const el = G(id);
-    el.textContent = msg;
-    el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 4000);
+function loadMessages() {
+    db.ref('messages/' + activeChatId).on('value', snap => {
+        let html = '';
+        snap.forEach(m => {
+            const msg = m.val();
+            const isMine = msg.sender === auth.currentUser.uid;
+            const ticks = isMine ? (msg.read ? '<span class="tick read">✓✓</span>' : '<span class="tick">✓</span>') : '';
+            html += `<div class="bubble ${isMine ? 'mine' : 'theirs'}">${msg.text}${ticks}</div>`;
+            
+            // Mark as read if receiving
+            if(!isMine && !msg.read) db.ref(`messages/${activeChatId}/${m.key}`).update({read: true});
+        });
+        G('msg-list').innerHTML = html;
+        G('msg-list').scrollTop = G('msg-list').scrollHeight;
+    });
 }
 
-auth.onAuthStateChanged(user => {
-    if(user && user.emailVerified) {
-        showView('chat');
-        initChat(user);
-    } else {
-        showView('login');
-    }
-});
+G('send-btn').onclick = () => {
+    const text = G('msg-input').value;
+    if(!text || !activeChatId) return;
+    db.ref('messages/' + activeChatId).push({
+        sender: auth.currentUser.uid,
+        text: text,
+        timestamp: Date.now(),
+        read: false
+    });
+    G('msg-input').value = '';
+};
 
-G('btn-logout').onclick = () => auth.signOut();
+const G = id => document.getElementById(id);
+auth.onAuthStateChanged(user => { if(user) loadMyProfile(user); });
+
+function logout() { auth.signOut().then(() => location.reload()); }
 </script>
-
 </body>
 </html>
