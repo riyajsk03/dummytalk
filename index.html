@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>DummyTalk | Dark Premium</title>
+    <title>DummyTalk</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -251,7 +251,7 @@
             </div>
 
             <div class="search-bar" id="search-bar">
-                <input type="text" id="search-input" class="finput" style="padding:12px 20px; border-radius:30px;" placeholder="Search users by username...">
+                <input type="text" id="search-input" class="finput" style="padding:12px 20px; border-radius:30px;" placeholder="Search by username or email...">
             </div>
 
             <div class="contact-list" id="contact-list"></div>
@@ -262,7 +262,7 @@
         <div class="chat-main" id="chat-main">
             <div class="empty-chat" id="empty-state">
                 <div class="empty-icon">💬</div>
-                <h3>DummyTalk Premium</h3>
+                <h3>DummyTalk</h3>
                 <p>Select a chat to start messaging</p>
             </div>
 
@@ -376,7 +376,7 @@ async function login(){ const e=G('log-email').value, p=G('log-pass').value; try
 async function forgotPassword(){ const e=G('log-email').value; if(!e)return alert('Enter email first'); try{ await auth.sendPasswordResetEmail(e); alert('Password reset sent!'); }catch(err){ alert(err.message); } }
 function logout(){ db.ref('users/'+myUser.uid+'/online').set(false); auth.signOut(); }
 
-// --- APP INIT (UPDATED WITH MISSING USERNAME FALLBACK FIX) ---
+// --- APP INIT ---
 function initApp(){
     db.ref('users/'+myUser.uid).on('value',snap=>{
         const d=snap.val()||{}; 
@@ -384,7 +384,7 @@ function initApp(){
         const sPhoto=d.photo||myUser.photoURL||'';
         let sUname=d.username;
 
-        // Auto-fix if username is missing (e.g. older account logic)
+        // Auto-fix if username is missing
         if(!sUname) {
             sUname = (myUser.email ? myUser.email.split('@')[0] : 'user') + Math.floor(Math.random()*999);
             db.ref('users/'+myUser.uid).update({username: sUname});
@@ -406,19 +406,12 @@ G('dr-photo').onchange=async e=>{
     try{ const ref=storage.ref(`avatars/${myUser.uid}`); await ref.put(f); const url=await ref.getDownloadURL(); db.ref('users/'+myUser.uid+'/photo').set(url); G('dr-av').innerHTML=`<img src="${url}">`; }catch(err){ alert(err.message); }
 };
 
-// UPDATED PROFILE SAVE TO INCLUDE USERNAME
 function updateProfileData() { 
     const newName = G('dr-name-in').value.trim();
-    // Enforce lowercase, alphanumeric + underscores only
     let newUname = G('dr-uname-in').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    
     if(!newName || !newUname) return alert("Name and username cannot be empty.");
     
-    // Ideally, check for uniqueness here. For DummyTalk, we update it directly.
-    db.ref('users/'+myUser.uid).update({
-        name: newName,
-        username: newUname
-    }).then(()=>{
+    db.ref('users/'+myUser.uid).update({ name: newName, username: newUname }).then(()=>{
         alert("Profile updated successfully!");
         toggleDrawer();
     }).catch(err => alert(err.message));
@@ -426,19 +419,48 @@ function updateProfileData() {
 
 async function changePasswordPrompt(){ const p=prompt("New password (min 6):"); if(p&&p.length>=6){ try{ await myUser.updatePassword(p); alert("Updated!"); }catch(e){ alert(e.message); } } }
 
-// --- SIDEBAR DATA ---
-G('search-input').oninput=e=>{
-    const q=e.target.value.toLowerCase().replace('@','');
-    if(q.length===0)return loadRecentChats();
-    db.ref('users').orderByChild('username').startAt(q).endAt(q+"\uf8ff").once('value',snap=>{
-        let html='';
-        snap.forEach(c=>{
-            const u=c.val(); if(u.uid===myUser.uid)return;
-            const av=u.photo?`<img src="${u.photo}">`:(u.name?u.name[0]:'?');
-            html+=`<div class="c-item" onclick="openChat('${u.uid}','${u.name}','${u.photo||''}')"><div class="av">${av}</div><div class="c-info"><div class="c-name-row"><span class="c-name">${u.name}</span></div><div class="c-msg-row"><span class="c-msg">@${u.username}</span></div></div></div>`;
+// --- SIDEBAR DATA (UPDATED FOR DUAL SEARCH) ---
+G('search-input').oninput = async e => {
+    let q = e.target.value.toLowerCase().trim();
+    if(q.length === 0) return loadRecentChats();
+    
+    let qUser = q.startsWith('@') ? q.substring(1) : q;
+
+    try {
+        // Run both queries simultaneously (Username & Email)
+        const [snapUser, snapEmail] = await Promise.all([
+            db.ref('users').orderByChild('username').startAt(qUser).endAt(qUser + "\uf8ff").once('value'),
+            db.ref('users').orderByChild('email').startAt(q).endAt(q + "\uf8ff").once('value')
+        ]);
+
+        const results = new Map();
+        const process = (snap) => {
+            snap.forEach(c => {
+                const u = c.val();
+                // Avoid displaying ourselves and avoid duplicates
+                if (u.uid !== myUser.uid && !results.has(u.uid)) results.set(u.uid, u);
+            });
+        };
+
+        process(snapUser);
+        process(snapEmail);
+
+        let html = '';
+        results.forEach(u => {
+            const av = u.photo ? `<img src="${u.photo}">` : (u.name ? u.name[0] : '?');
+            html += `<div class="c-item" onclick="openChat('${u.uid}','${u.name}','${u.photo||''}')">
+                        <div class="av">${av}</div>
+                        <div class="c-info">
+                            <div class="c-name-row"><span class="c-name">${u.name}</span></div>
+                            <div class="c-msg-row"><span class="c-msg">@${u.username}</span></div>
+                        </div>
+                     </div>`;
         });
-        G('contact-list').innerHTML=html||'<div style="text-align:center; padding:20px; color:var(--text-muted)">No users found</div>';
-    });
+        
+        G('contact-list').innerHTML = html || '<div style="text-align:center; padding:20px; color:var(--text-muted)">No users found</div>';
+    } catch (err) {
+        console.error("Search Error:", err);
+    }
 };
 
 function loadRecentChats(){
