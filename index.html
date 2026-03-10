@@ -27,9 +27,19 @@
         .fgroup { margin-bottom: 15px; text-align: left; }
         .finput { width: 100%; background: #1c2733; border: 1px solid var(--border); padding: 12px 16px; border-radius: var(--radius); color: #fff; font-size: 1rem; outline: none; transition: 0.2s; }
         .finput:focus { border-color: var(--accent-btn); }
+        
         .btn { width: 100%; padding: 12px; border-radius: var(--radius); border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 1rem; color: #fff; background: var(--accent-btn); }
         .btn:hover { background: #3293e3; }
-        .btn-link { background: none; color: var(--accent-btn); margin-top: 15px; font-size: 0.9rem; }
+        
+        /* Google Button Style */
+        .btn-google { background: #fff; color: #333; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; }
+        .btn-google:hover { background: #f1f1f1; }
+        .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: var(--text-muted); font-size: 0.85rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+        .divider:not(:empty)::before { margin-right: .5em; }
+        .divider:not(:empty)::after { margin-left: .5em; }
+
+        .btn-link { background: none; color: var(--accent-btn); margin-top: 15px; font-size: 0.9rem; border: none; cursor: pointer; }
         .alert { font-size: 0.85rem; padding: 10px; border-radius: 8px; margin-top: 15px; display: none; }
         .alert.err { background: rgba(239, 83, 80, 0.1); color: var(--danger); border: 1px solid var(--danger); }
         .alert.ok { background: rgba(77, 222, 156, 0.1); color: var(--success); border: 1px solid var(--success); }
@@ -76,7 +86,7 @@
         .theirs { align-self: flex-start; background: var(--recv); border-bottom-left-radius: 4px; }
         .msg-meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
         .tick { font-size: 0.75rem; }
-        .tick.read { color: #60a5fa; } /* Blue double ticks for read */
+        .tick.read { color: #60a5fa; }
 
         /* Input */
         .input-area { padding: 12px 20px; background: var(--header); display: flex; align-items: center; gap: 15px; }
@@ -96,16 +106,24 @@
 </head>
 <body>
 
-<div class="view" id="view-login">
+<div class="view active" id="view-login">
     <div class="auth-card">
         <span class="auth-logo">💬</span>
         <h2 style="margin-bottom: 5px;">DummyTalk</h2>
         <p style="color:var(--text-muted); margin-bottom: 25px;">Sign in to continue</p>
+        
         <div class="fgroup"><input type="email" id="log-email" class="finput" placeholder="Email address"></div>
         <div class="fgroup"><input type="password" id="log-pass" class="finput" placeholder="Password"></div>
         <button class="btn" onclick="login()">Sign In</button>
+        
+        <div class="divider">OR</div>
+        <button class="btn btn-google" onclick="loginWithGoogle()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="G"> Continue with Google
+        </button>
+
         <div class="alert err" id="log-err"></div>
         <div class="alert ok" id="log-ok"></div>
+        
         <button class="btn-link" onclick="forgotPassword()">Forgot Password?</button>
         <p style="margin-top: 20px; font-size: 0.9rem;">No account? <a href="#" onclick="switchView('register')" style="color:var(--accent-btn)">Register</a></p>
     </div>
@@ -120,6 +138,10 @@
             <div class="fgroup"><input type="email" id="reg-email" class="finput" placeholder="Email address"></div>
             <div class="fgroup"><input type="password" id="reg-pass" class="finput" placeholder="Password (min 6 chars)"></div>
             <button class="btn" onclick="nextStep(2)">Next ➔</button>
+            <div class="divider">OR</div>
+            <button class="btn btn-google" onclick="loginWithGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="G"> Continue with Google
+            </button>
         </div>
 
         <div class="reg-step" id="step-2">
@@ -176,8 +198,7 @@
                 </div>
             </div>
 
-            <div class="contact-list" id="contact-list">
-                </div>
+            <div class="contact-list" id="contact-list"></div>
         </div>
 
         <div class="chat-main" id="chat-main">
@@ -248,7 +269,9 @@ function switchView(view) {
 // Monitor Auth State
 auth.onAuthStateChanged(user => {
     if (user) {
-        if (!user.emailVerified) {
+        // Allow if email is verified OR if they logged in via Google (Google sets providerData)
+        const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
+        if (!user.emailVerified && !isGoogle) {
             auth.signOut();
             switchView('login');
             showErr('log-err', 'Please verify your email address first.');
@@ -262,6 +285,31 @@ auth.onAuthStateChanged(user => {
         switchView('login');
     }
 });
+
+// Google Login
+async function loginWithGoogle() {
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await auth.signInWithPopup(provider);
+        const u = result.user;
+        
+        // Check if user exists in our DB, if not, create their profile automatically
+        const snap = await db.ref('users/' + u.uid).once('value');
+        if (!snap.exists()) {
+            const generatedUname = (u.email.split('@')[0] + Math.floor(Math.random() * 999)).replace(/[^a-z0-9]/g, '_');
+            await db.ref('users/' + u.uid).set({
+                uid: u.uid,
+                name: u.displayName || 'Google User',
+                username: generatedUname,
+                email: u.email,
+                photo: u.photoURL || '',
+                online: true
+            });
+        }
+    } catch(err) {
+        showErr('log-err', err.message);
+    }
+}
 
 // Multi-step Registration UI
 let regFile = null;
@@ -283,7 +331,7 @@ function nextStep(n) {
     G('step-' + n).classList.add('active');
 }
 
-// Register Function
+// Custom Email Registration
 async function register() {
     const email = G('reg-email').value, pass = G('reg-pass').value;
     const name = G('reg-name').value, uname = G('reg-uname').value.toLowerCase();
@@ -327,14 +375,20 @@ async function forgotPassword() {
 
 // --- 3. APP INITIALIZATION & PROFILE ---
 function initApp() {
-    // Load Profile Data into Drawer
+    // Load Profile Data into Drawer with Strict Fallbacks
     db.ref('users/' + myUser.uid).on('value', snap => {
-        const d = snap.val();
-        if(!d) return;
-        G('dr-name').innerText = d.name;
-        G('dr-uname').innerText = '@' + d.username;
-        G('dr-email').innerText = d.email;
-        G('dr-av').innerHTML = d.photo ? `<img src="${d.photo}">` : d.name[0];
+        const d = snap.val() || {};
+        
+        // Fallbacks prevent "undefined" if DB is missing fields
+        const safeName = d.name || myUser.displayName || 'User';
+        const safeUname = d.username || 'user_' + myUser.uid.slice(0, 5);
+        const safeEmail = d.email || myUser.email || 'No email provided';
+        const safePhoto = d.photo || myUser.photoURL || '';
+
+        G('dr-name').innerText = safeName;
+        G('dr-uname').innerText = '@' + safeUname;
+        G('dr-email').innerText = safeEmail;
+        G('dr-av').innerHTML = safePhoto ? `<img src="${safePhoto}">` : safeName[0];
     });
 
     // Set Online Presence
@@ -378,13 +432,13 @@ G('search-input').oninput = e => {
         snap.forEach(c => {
             const u = c.val();
             if(u.uid === myUser.uid) return;
-            const av = u.photo ? `<img src="${u.photo}">` : u.name[0];
+            const av = u.photo ? `<img src="${u.photo}">` : (u.name ? u.name[0] : '?');
             html += `
-            <div class="c-item" onclick="openChat('${u.uid}', '${u.name}', '${u.photo || ''}', '${u.username}')">
+            <div class="c-item" onclick="openChat('${u.uid}', '${u.name || 'User'}', '${u.photo || ''}', '${u.username || ''}')">
                 <div class="av-wrapper"><div class="av">${av}</div></div>
                 <div class="c-info">
-                    <div class="c-name">${u.name}</div>
-                    <div class="c-msg">@${u.username}</div>
+                    <div class="c-name">${u.name || 'User'}</div>
+                    <div class="c-msg">@${u.username || 'unknown'}</div>
                 </div>
             </div>`;
         });
@@ -393,23 +447,21 @@ G('search-input').oninput = e => {
 };
 
 function loadRecentChats() {
-    // In a full production app, you'd have a 'user_chats' node. 
-    // For this demo, we'll just show all users for simplicity when search is empty.
     db.ref('users').limitToFirst(20).once('value', snap => {
         let html = '';
         snap.forEach(c => {
             const u = c.val();
             if(u.uid === myUser.uid) return;
-            const av = u.photo ? `<img src="${u.photo}">` : u.name[0];
+            const av = u.photo ? `<img src="${u.photo}">` : (u.name ? u.name[0] : '?');
             const dot = u.online ? 'display:block;' : '';
             html += `
-            <div class="c-item" onclick="openChat('${u.uid}', '${u.name}', '${u.photo || ''}', '${u.username}')">
+            <div class="c-item" onclick="openChat('${u.uid}', '${u.name || 'User'}', '${u.photo || ''}', '${u.username || ''}')">
                 <div class="av-wrapper">
                     <div class="av">${av}</div>
                     <div class="online-dot" style="${dot}"></div>
                 </div>
                 <div class="c-info">
-                    <div class="c-name">${u.name}</div>
+                    <div class="c-name">${u.name || 'User'}</div>
                     <div class="c-msg">Tap to chat</div>
                 </div>
             </div>`;
