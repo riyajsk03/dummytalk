@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>DummyTalk | Dark UI/UX</title>
+    <title>DummyTalk | Dark Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -135,6 +135,12 @@
         .send-btn { width: 55px; height: 55px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 20px rgba(124, 93, 255, 0.4); transition: 0.3s; }
         .send-btn:hover { transform: scale(1.05); }
 
+        /* Username Input Styling in Drawer */
+        .username-field { display: flex; align-items: center; background: var(--bg-base); border-radius: var(--radius-lg); padding: 0 20px; transition: 0.3s; }
+        .username-field:focus-within { border: 1px solid var(--accent); background: #181820; }
+        .username-field span { color: var(--accent); font-weight: 600; font-size: 14px; }
+        .username-field input { border: none; background: transparent; padding: 16px 5px; flex: 1; outline: none; color: #fff; font-size: 14px; }
+
         /* Mobile */
         #back-btn { display: none; background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; margin-right: 5px; }
         @media (max-width: 768px) {
@@ -208,12 +214,19 @@
                     <button class="icon-btn" onclick="toggleDrawer()">✕</button>
                 </div>
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <label style="cursor:pointer;">
-                        <div class="av" id="dr-av" style="width:90px; height:90px; font-size: 32px; margin: 0 auto 15px;">?</div>
+                    <label style="cursor:pointer; display:block; margin:0 auto 15px; width:100px; height:100px;">
+                        <div class="av" id="dr-av" style="width:100%; height:100%; font-size: 32px; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">?</div>
                         <input type="file" id="dr-photo" hidden accept="image/*">
                     </label>
-                    <div class="fgroup"><input type="text" id="dr-name-in" class="finput" style="text-align:center; font-weight:600; font-size:18px; padding:10px;" placeholder="Full Name"></div>
-                    <p id="dr-uname" style="color:var(--text-muted); font-size:14px;">@username</p>
+                    <div class="fgroup" style="margin-bottom: 10px;">
+                        <input type="text" id="dr-name-in" class="finput" style="text-align:center; font-weight:600; font-size:16px;" placeholder="Full Name">
+                    </div>
+                    <div class="fgroup">
+                        <div class="username-field">
+                            <span>@</span>
+                            <input type="text" id="dr-uname-in" placeholder="username">
+                        </div>
+                    </div>
                 </div>
                 <button class="btn" onclick="updateProfileData()" style="margin-bottom: 15px;">Save Profile</button>
                 <button class="btn" style="background:var(--bg-base); color:var(--text-main);" onclick="changePasswordPrompt()">Change Password</button>
@@ -238,7 +251,7 @@
             </div>
 
             <div class="search-bar" id="search-bar">
-                <input type="text" id="search-input" class="finput" style="padding:12px 20px; border-radius:30px;" placeholder="Search users by @username...">
+                <input type="text" id="search-input" class="finput" style="padding:12px 20px; border-radius:30px;" placeholder="Search users by username...">
             </div>
 
             <div class="contact-list" id="contact-list"></div>
@@ -363,14 +376,26 @@ async function login(){ const e=G('log-email').value, p=G('log-pass').value; try
 async function forgotPassword(){ const e=G('log-email').value; if(!e)return alert('Enter email first'); try{ await auth.sendPasswordResetEmail(e); alert('Password reset sent!'); }catch(err){ alert(err.message); } }
 function logout(){ db.ref('users/'+myUser.uid+'/online').set(false); auth.signOut(); }
 
-// --- APP INIT ---
+// --- APP INIT (UPDATED WITH MISSING USERNAME FALLBACK FIX) ---
 function initApp(){
     db.ref('users/'+myUser.uid).on('value',snap=>{
-        const d=snap.val()||{}; const sName=d.name||myUser.displayName||'User', sPhoto=d.photo||myUser.photoURL||'';
+        const d=snap.val()||{}; 
+        const sName=d.name||myUser.displayName||'User';
+        const sPhoto=d.photo||myUser.photoURL||'';
+        let sUname=d.username;
+
+        // Auto-fix if username is missing (e.g. older account logic)
+        if(!sUname) {
+            sUname = (myUser.email ? myUser.email.split('@')[0] : 'user') + Math.floor(Math.random()*999);
+            db.ref('users/'+myUser.uid).update({username: sUname});
+        }
+
         G('sb-my-name').innerText = sName;
-        G('dr-name-in').value = sName; G('dr-uname').innerText = '@'+(d.username||'user');
+        G('dr-name-in').value = sName; 
+        G('dr-uname-in').value = sUname;
         G('dr-av').innerHTML = sPhoto?`<img src="${sPhoto}">`:sName[0];
     });
+    
     const myOnlineRef=db.ref('users/'+myUser.uid+'/online'), myLastSeenRef=db.ref('users/'+myUser.uid+'/lastSeen');
     db.ref('.info/connected').on('value',snap=>{ if(snap.val()===true){ myOnlineRef.onDisconnect().set(false); myLastSeenRef.onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); myOnlineRef.set(true); }});
     loadRecentChats();
@@ -380,7 +405,25 @@ G('dr-photo').onchange=async e=>{
     const f=e.target.files[0]; if(!f)return;
     try{ const ref=storage.ref(`avatars/${myUser.uid}`); await ref.put(f); const url=await ref.getDownloadURL(); db.ref('users/'+myUser.uid+'/photo').set(url); G('dr-av').innerHTML=`<img src="${url}">`; }catch(err){ alert(err.message); }
 };
-function updateProfileData(){ db.ref('users/'+myUser.uid).update({name:G('dr-name-in').value}).then(()=>toggleDrawer()); }
+
+// UPDATED PROFILE SAVE TO INCLUDE USERNAME
+function updateProfileData() { 
+    const newName = G('dr-name-in').value.trim();
+    // Enforce lowercase, alphanumeric + underscores only
+    let newUname = G('dr-uname-in').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    
+    if(!newName || !newUname) return alert("Name and username cannot be empty.");
+    
+    // Ideally, check for uniqueness here. For DummyTalk, we update it directly.
+    db.ref('users/'+myUser.uid).update({
+        name: newName,
+        username: newUname
+    }).then(()=>{
+        alert("Profile updated successfully!");
+        toggleDrawer();
+    }).catch(err => alert(err.message));
+}
+
 async function changePasswordPrompt(){ const p=prompt("New password (min 6):"); if(p&&p.length>=6){ try{ await myUser.updatePassword(p); alert("Updated!"); }catch(e){ alert(e.message); } } }
 
 // --- SIDEBAR DATA ---
