@@ -99,7 +99,6 @@
         .chat-header { height: 90px; background: var(--bg-panel); border-bottom-left-radius: 40px; display: flex; align-items: center; padding: 0 30px; justify-content: space-between; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .ch-left { display: flex; align-items: center; gap: 15px; overflow: hidden; }
         
-        /* Clickable Profile Area */
         .profile-click-zone { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 5px; border-radius: var(--radius-lg); transition: 0.2s; }
         .profile-click-zone:hover { background: rgba(255,255,255,0.03); }
         
@@ -286,7 +285,7 @@
                 
                 <div class="chat-header">
                     <div class="ch-left">
-                        <button id="back-btn" onclick="closeChat()">‹</button>
+                        <button id="back-btn" onclick="closeChat(event)">‹</button>
                         <div class="profile-click-zone" onclick="openContactProfile()">
                             <div class="av" id="chat-av" style="width:46px; height:46px;">?</div>
                             <div class="ch-info">
@@ -345,31 +344,40 @@ function switchView(view){document.querySelectorAll('.view').forEach(v=>v.classL
 function openModal(id) { G(id).classList.add('active'); }
 function closeModal(id) { G(id).classList.remove('active'); }
 
-// --- DATA PARSER (Fixes old accounts vs new accounts) ---
-function parseUser(u) {
-    if(!u) return {};
-    let name = u.name || u.display_name || u.displayName || 'Unknown User';
-    if (name === 'undefined') name = 'Unknown User';
+// --- REPAIRED PARSER (Pulls Auth fallback if DB is missing) ---
+function parseUser(u, authUser = null) {
+    if(!u) u = {};
     
-    let photo = u.photo || u.avatar_url || u.photoURL || '';
-    if (photo === 'undefined') photo = '';
+    // Resolve Name
+    let name = u.name || u.display_name || u.displayName;
+    if (!name || name === 'undefined' || name === 'Unknown User') {
+        name = authUser ? (authUser.displayName || 'User') : 'User';
+    }
     
-    let username = u.username || 'user';
-    if (username === 'undefined') username = 'user';
+    // Resolve Photo
+    let photo = u.photo || u.avatar_url || u.photoURL;
+    if (!photo || photo === 'undefined') {
+        photo = authUser ? (authUser.photoURL || '') : '';
+    }
+    
+    // Resolve Username
+    let username = u.username;
+    if (!username || username === 'undefined') {
+        username = 'user';
+    }
     
     return {
-        uid: u.uid,
+        uid: u.uid || (authUser ? authUser.uid : ''),
         name: name,
         photo: photo,
         username: username,
-        email: u.email || '',
+        email: u.email || (authUser ? authUser.email : ''),
         bio: u.bio || 'Available',
         online: !!u.online,
         lastSeen: u.lastSeen || null
     };
 }
 
-// Safe Time Formatter
 const formatTime = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -425,19 +433,36 @@ async function login(){ const e=G('log-email').value, p=G('log-pass').value; try
 async function forgotPassword(){ const e=G('log-email').value; if(!e)return alert('Enter email first'); try{ await auth.sendPasswordResetEmail(e); alert('Password reset sent!'); }catch(err){ alert(err.message); } }
 function logout(){ db.ref('users/'+myUser.uid+'/online').set(false); auth.signOut(); }
 
-// --- APP INIT ---
+// --- APP INIT (With DB Auto-Repair) ---
 function initApp(){
     db.ref('users/'+myUser.uid).on('value',snap=>{
-        const u = parseUser(snap.val());
+        // Pass myUser to fallback if DB is missing name/photo
+        const u = parseUser(snap.val(), myUser);
         
+        let updates = {};
+        
+        // Auto-fix username
         if(u.username === 'user' && myUser.email) {
             u.username = (myUser.email.split('@')[0] + Math.floor(Math.random()*999)).replace(/[^a-z0-9]/g,'_');
-            db.ref('users/'+myUser.uid).update({username: u.username});
+            updates.username = u.username;
         }
+        
+        // Auto-fix email
         if(!u.email && myUser.email) {
             u.email = myUser.email;
-            db.ref('users/'+myUser.uid).update({email: u.email});
+            updates.email = u.email;
         }
+
+        // Auto-repair DB if it was previously saved as undefined/empty
+        if ((!snap.val() || !snap.val().name || snap.val().name === 'undefined') && myUser.displayName) {
+            updates.name = myUser.displayName;
+        }
+        if ((!snap.val() || !snap.val().photo || snap.val().photo === 'undefined') && myUser.photoURL) {
+            updates.photo = myUser.photoURL;
+        }
+
+        // Run auto-repair
+        if (Object.keys(updates).length > 0) db.ref('users/'+myUser.uid).update(updates);
 
         myProfileData = u;
 
@@ -471,12 +496,11 @@ function updateProfileData() {
 }
 async function changePasswordPrompt(){ const p=prompt("New password (min 6):"); if(p&&p.length>=6){ try{ await myUser.updatePassword(p); alert("Updated!"); }catch(e){ alert(e.message); } } }
 
-// --- CLIENT-SIDE UNIFIED SEARCH (Fixes Case Sensitivity & Email Search) ---
-G('search-input').oninput = e => {
+// --- SIDEBAR DATA & SEARCH ---
+G('search-input').oninput = async e => {
     let q = e.target.value.toLowerCase().trim();
     if(q.length === 0) return loadRecentChats();
 
-    // Pull all users to do a robust, case-insensitive, multi-field search locally
     db.ref('users').once('value', snap => {
         let html = '';
         let found = false;
@@ -485,7 +509,6 @@ G('search-input').oninput = e => {
             const u = parseUser(c.val());
             if (u.uid === myUser.uid) return;
             
-            // Search across Name, Username, AND Email simultaneously
             const searchStr = `${u.name} @${u.username} ${u.email}`.toLowerCase();
             
             if (searchStr.includes(q)) {
@@ -511,7 +534,6 @@ function loadRecentChats(){
         let chats=[]; snap.forEach(c=>{chats.push({id:c.key,...c.val()});}); chats.reverse();
         let html='';
         chats.forEach(c=>{
-            // Safely parse recent chat preview
             const safeName = (c.name && c.name !== 'undefined') ? c.name : 'Unknown User';
             const av = (c.photo && c.photo !== 'undefined') ? `<img src="${c.photo}">` : safeName.charAt(0).toUpperCase();
             const badge = c.unreadCount>0 ? `<div class="unread-badge">${c.unreadCount}</div>` : '';
@@ -527,7 +549,7 @@ function loadRecentChats(){
     });
 }
 
-// --- CHAT LOGIC (DYNAMIC PROFILE FETCHING) ---
+// --- CHAT LOGIC ---
 function openChat(uid){
     activeChatUid=uid; activeChatId=[myUser.uid,uid].sort().join('_');
     G('empty-state').style.display='none'; G('active-chat').style.display='flex';
@@ -537,7 +559,6 @@ function openChat(uid){
     if(messagesRef)messagesRef.off(); if(presenceRef)presenceRef.off(); if(activeProfileRef)activeProfileRef.off();
     db.ref(`chats/${myUser.uid}/${uid}`).update({unreadCount:0});
 
-    // 1. Fetch exact profile data live from the DB (Fixes Unknown User / Missing Photo in Header)
     activeProfileRef = db.ref('users/'+uid);
     activeProfileRef.on('value', snap => {
         const u = parseUser(snap.val());
@@ -551,7 +572,6 @@ function openChat(uid){
         G('chat-status').innerText = statusText;
     });
     
-    // 2. Load Messages
     messagesRef=db.ref('messages/'+activeChatId); messagesRef.on('value',snap=>{
         let html='';
         snap.forEach(m=>{
@@ -579,7 +599,8 @@ function openContactProfile() {
     });
 }
 
-function closeChat(){ 
+function closeChat(e){ 
+    if(e) e.stopPropagation(); 
     G('sidebar').classList.remove('hide'); G('chat-main').classList.remove('active'); 
     G('empty-state').style.display='flex'; G('active-chat').style.display='none'; 
     activeChatUid=null; activeChatId=null; 
@@ -594,7 +615,6 @@ function sendMessage(imgUrl=null){
     db.ref('messages/'+activeChatId).push(payload);
     const displayMsg = imgUrl ? '📷 Photo' : text;
     
-    // Write clean parsed data to recents list
     db.ref(`chats/${myUser.uid}/${activeChatUid}`).update({name:G('chat-name').innerText, photo:G('chat-av').innerHTML.includes('img')?G('chat-av').querySelector('img').src:'', lastMessage:displayMsg, timestamp:ts, unreadCount:0});
     db.ref(`chats/${activeChatUid}/${myUser.uid}`).once('value',snap=>{
         const currentUnread=snap.exists()?(snap.val().unreadCount||0):0;
